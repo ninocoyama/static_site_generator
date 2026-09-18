@@ -1,0 +1,1 @@
+Guided project from boot.dev for a static website generator.
