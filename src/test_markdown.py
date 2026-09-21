@@ -5,6 +5,7 @@ from markdown import extract_markdown_images
 from markdown import extract_markdown_links
 from markdown import split_nodes_image
 from markdown import split_nodes_link
+from markdown import markdown_to_blocks
 from markdown import text_to_textnodes
 from textnode import TextNode, TextType
 
@@ -301,6 +302,42 @@ class TestTextToTextNodes(unittest.TestCase):
 		self.assertEqual(
 			text_to_textnodes("[link](https://example.com)"),
 			[TextNode("link", TextType.LINK, "https://example.com")],
+		)
+
+
+class TestMarkdownToBlocks(unittest.TestCase):
+	def test_splits_markdown_into_blocks(self):
+		markdown = "# Heading\n\nThis is a paragraph.\n\nAnother paragraph."
+
+		self.assertEqual(
+			markdown_to_blocks(markdown),
+			["# Heading", "This is a paragraph.", "Another paragraph."],
+		)
+
+	def test_strips_whitespace_from_each_block(self):
+		markdown = "  # Heading  \n\n  Paragraph with spaces.  "
+
+		self.assertEqual(
+			markdown_to_blocks(markdown),
+			["# Heading", "Paragraph with spaces."],
+		)
+
+	def test_ignores_empty_blocks(self):
+		markdown = "First\n\n\n\nSecond\n\n   \n\nThird"
+
+		self.assertEqual(markdown_to_blocks(markdown), ["First", "Second", "Third"])
+
+	def test_ignores_empty_block_from_three_consecutive_newlines(self):
+		markdown = "First\n\n\nSecond"
+
+		self.assertEqual(markdown_to_blocks(markdown), ["First", "Second"])
+
+	def test_preserves_single_newlines_inside_a_block(self):
+		markdown = "- first item\n- second item\n\nParagraph"
+
+		self.assertEqual(
+			markdown_to_blocks(markdown),
+			["- first item\n- second item", "Paragraph"],
 		)
 
 
