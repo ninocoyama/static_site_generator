@@ -6,7 +6,10 @@ from markdown import extract_markdown_links
 from markdown import split_nodes_image
 from markdown import split_nodes_link
 from markdown import markdown_to_blocks
+from markdown import block_to_block_type
 from markdown import text_to_textnodes
+from markdown import markdown_to_html_node
+from markdown import BlockType
 from textnode import TextNode, TextType
 
 
@@ -338,6 +341,110 @@ class TestMarkdownToBlocks(unittest.TestCase):
 		self.assertEqual(
 			markdown_to_blocks(markdown),
 			["- first item\n- second item", "Paragraph"],
+		)
+
+
+class TestBlockToBlockType(unittest.TestCase):
+	def test_identifies_headings(self):
+		self.assertEqual(block_to_block_type("### Heading"), BlockType.HEADING)
+
+	def test_rejects_heading_with_more_than_six_hashes(self):
+		self.assertEqual(block_to_block_type("####### Not a heading"), BlockType.PARAGRAPH)
+
+	def test_identifies_code_blocks(self):
+		self.assertEqual(block_to_block_type("```\nprint('hello')\n```"), BlockType.CODE)
+
+	def test_identifies_quote_blocks(self):
+		self.assertEqual(
+			block_to_block_type("> first\n> second"),
+			BlockType.QUOTE,
+		)
+
+	def test_identifies_unordered_list_blocks(self):
+		self.assertEqual(
+			block_to_block_type("- first\n- second"),
+			BlockType.UNORDERED_LIST,
+		)
+
+	def test_identifies_ordered_list_blocks(self):
+		self.assertEqual(
+			block_to_block_type("1. first\n2. second"),
+			BlockType.ORDERED_LIST,
+		)
+
+	def test_rejects_non_sequential_ordered_list(self):
+		self.assertEqual(
+			block_to_block_type("4. first\n7. second\n10. third"),
+			BlockType.PARAGRAPH,
+		)
+
+	def test_mixed_blocks_are_paragraphs(self):
+		self.assertEqual(
+			block_to_block_type("- first\nplain text"),
+			BlockType.PARAGRAPH,
+		)
+
+
+class TestMarkdownToHTMLNode(unittest.TestCase):
+	def test_wraps_all_block_nodes_in_a_div(self):
+		markdown = "# Heading\n\nThis is a paragraph."
+
+		result = markdown_to_html_node(markdown)
+
+		self.assertEqual(result.tag, "div")
+		self.assertEqual(result.to_html(), "<div><h1>Heading</h1><p>This is a paragraph.</p></div>")
+
+	def test_paragraphs(self):
+		markdown = """
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+
+		node = markdown_to_html_node(markdown)
+
+		self.assertEqual(
+			node.to_html(),
+			"<div><p>This is <b>bolded</b> paragraph text in a p tag here</p>"
+			"<p>This is another paragraph with <i>italic</i> text and "
+			"<code>code</code> here</p></div>",
+		)
+
+	def test_codeblock_preserves_inline_markdown(self):
+		markdown = """
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
+"""
+
+		node = markdown_to_html_node(markdown)
+
+		self.assertEqual(
+			node.to_html(),
+			"<div><pre><code>This is text that _should_ remain\n"
+			"the **same** even with inline stuff\n</code></pre></div>",
+		)
+
+	def test_empty_markdown_returns_empty_div(self):
+		self.assertEqual(markdown_to_html_node("\n\n").to_html(), "<div></div>")
+
+	def test_converts_remaining_block_types_in_order(self):
+		markdown = (
+			"## Heading\n\n"
+			"> quoted text\n> on two lines\n\n"
+			"- first\n- second\n\n"
+			"1. one\n2. two"
+		)
+
+		self.assertEqual(
+			markdown_to_html_node(markdown).to_html(),
+			"<div><h2>Heading</h2><blockquote>quoted text on two lines</blockquote>"
+			"<ul><li>first</li><li>second</li></ul>"
+			"<ol><li>one</li><li>two</li></ol></div>",
 		)
 
 
