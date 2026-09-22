@@ -31,7 +31,7 @@ def extract_title(markdown):
     raise Exception("Markdown document has no h1 title")
 
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, basepath="/"):
     print(f"Generating page from `{from_path}` to `{dest_path}` using `{template_path}`")
 
     with open(from_path, encoding="utf-8") as markdown_file:
@@ -43,6 +43,8 @@ def generate_page(from_path, template_path, dest_path):
     html = markdown_to_html_node(markdown).to_html()
     title = extract_title(markdown)
     page = template.replace("{{ Title }}", title).replace("{{ Content }}", html)
+    page = page.replace('href="/', f'href="{basepath}')
+    page = page.replace('src="/', f'src="{basepath}')
 
     destination_directory = os.path.dirname(dest_path)
     if destination_directory:
@@ -52,7 +54,7 @@ def generate_page(from_path, template_path, dest_path):
         destination_file.write(page)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath="/"):
     for filename in os.listdir(dir_path_content):
         source_path = os.path.join(dir_path_content, filename)
 
@@ -62,25 +64,27 @@ def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
 
             destination_filename = os.path.splitext(filename)[0] + ".html"
             destination_path = os.path.join(dest_dir_path, destination_filename)
-            generate_page(source_path, template_path, destination_path)
+            generate_page(source_path, template_path, destination_path, basepath)
         else:
             destination_path = os.path.join(dest_dir_path, filename)
             os.makedirs(destination_path, exist_ok=True)
-            generate_pages_recursive(source_path, template_path, destination_path)
+            generate_pages_recursive(source_path, template_path, destination_path, basepath)
 
 
 def main():
     static_path = os.path.join(PROJECT_ROOT, "static")
-    public_path = os.path.join(PROJECT_ROOT, "public")
+    docs_path = os.path.join(PROJECT_ROOT, "docs")
+    basepath = sys.argv[1] if len(sys.argv) > 1 else "/"
 
-    if os.path.exists(public_path):
-        shutil.rmtree(public_path)
+    if os.path.exists(docs_path):
+        shutil.rmtree(docs_path)
 
-    copy_files(static_path, public_path)
+    copy_files(static_path, docs_path)
     generate_pages_recursive(
         os.path.join(PROJECT_ROOT, "content"),
         os.path.join(PROJECT_ROOT, "template.html"),
-        public_path,
+        docs_path,
+        basepath,
     )
 
 

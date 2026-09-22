@@ -1,10 +1,10 @@
-from textnode import TextNode
-from textnode import TextType
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from main import main
 
 
-def main():
-    textnode = TextNode("Text test", TextType.BOLD, "http://google.com")
-    print(textnode)
-
-
-main()
+if __name__ == "__main__":
+    main()
